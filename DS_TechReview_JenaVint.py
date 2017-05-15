@@ -99,14 +99,16 @@ print corr["target"].nlargest(25)
 print corr["target"].nsmallest(25)
 
 # very low correlations, check for any pattern differences in target group (1) vs. non target group (0)
-
-non_age_var_list = [col for col in data if col not in [["target"] + age_cols]]
-for var in non_age_var_list:
+remove_list = ["target", "product", "MAJOR_CREDIT_CARD_LIF"] + age_cols
+hist_var_list = [col for col in data if col not in remove_list]
+    
+for var in hist_var_list:
     t0 = data[data.target==0][var]
     t1 = data[data.target==1][var]
     n, bins, patches = plt.hist([t0,t1], label=["t0","t1"])
     plt.title(var, fontsize=14)
     plt.legend(fontsize=12)
+    plt.show()
 
 """
 var = "tellop_ind"
@@ -117,19 +119,45 @@ plt.title(var, fontsize=14)
 plt.legend(fontsize=12)
 """
 
+# create dummy variables for object datatypes
+
+"""
+data["product_vd"] =  np.where(data["product"] == "VIDEO/DATA", 1, 0)
+data["product_v"] = np.where(data["product"] == "VIDEO ONLY", 1, 0)
+data["product_vdc"] = np.where(data["product"] == "VIDEO/DATA/VOICE", 1, 0)
+data["product_d"] = np.where(data["product"] == "DATA ONLY", 1, 0)
+data["product_dc"] = np.where(data["product"] == "DATA/VOICE", 1, 0)
+data["product_vdh"] = np.where(data["product"] == "VIDEO/DATA/HOME", 1, 0) # 
+data["product_vc"] = np.where(data["product"] == "VIDEO/VOICE", 1, 0) # 
+data["product_vdch"] = np.where(data["product"] == "VIDEO/DATA/VOICE/HOME", 1, 0) # 
+data["product_c"] = np.where(data["product"] == "VOICE ONLY", 1, 0) # 
+data["product_h"] = np.where(data["product"] == "HOME ONLY", 1, 0) # 
+data["product_dh"] = np.where(data["product"] == "DATA/HOME", 1, 0) # 
+data["product_dch"] = np.where(data["product"] == "DATA/VOICE/HOME", 1, 0) # 
+data["product_ch"] = np.where(data["product"] == "VOICE/HOME", 1, 0) # 
+data["product_vch"] = np.where(data["product"] == "VIDEO/VOICE/HOME", 1, 0) # 
+data["product_vh"] = np.where(data["product"] == "VIDEO/HOME", 1, 0) # 
+"""
+
+data_mod = pd.get_dummies(data, columns=["product", "MAJOR_CREDIT_CARD_LIF"])
+pcols = [col for col in data_mod if "product" in col]
+print pcols
+print data_mod[pcols].head(10)
+
 # Modeling Process (1st iteration, no parameter tuning yet)
 
 # Split data into training and test, random sample of 70% of customers = train, remaining 30% = test
 random.seed = 1234
-L = range(0, data.shape[0])
+L = range(0, data_mod.shape[0])
 random.shuffle(L)
-n = int(0.7*data.shape[0])
+n = int(0.7*data_mod.shape[0])
+
 # create train as random 70% of customers, test as remaining 30%
-train = data.iloc[L[0:n], :].copy() 
-test = data.iloc[L[n:], :].copy()
+train = data_mod.iloc[L[0:n], :].copy() 
+test = data_mod.iloc[L[n:], :].copy()
 # save train and test datasets to a pickle file
-pickle.dump(train, open("{0}\{1}".format(file_path, "train"), "Wb"))
-pickle.dump(test, open("{0}\{1}".format(file_path, "test"), "Wb"))
+pickle.dump(train, open("{0}\{1}".format(file_path, "train"), "wb"))
+pickle.dump(test, open("{0}\{1}".format(file_path, "test"), "wb"))
 
 # print shape and % of target in the train and test datasets
 print "{0}: {1}".format("Number of rows in training data", train.shape[0])
@@ -138,7 +166,7 @@ print "{0}: {1}".format("Percent of target in training data", (train[train.targe
 print "{0}: {1}".format("Percent of target in test data", (test[test.target == 1].shape[0]*1.0)/test.shape[0])
 
 # create list of features (currently set to all independent variables)
-feature_list = [col for col in data if col not in ["target"]]
+feature_list = [col for col in data_mod if col not in ["target"]]
 print feature_list
 print "{0}: {1}".format("Number of features", len(feature_list))
 
@@ -153,11 +181,70 @@ y_test = test["target"].values
 rfclass = ske.RandomForestClassifier(n_estimators=200, random_state=12345)
 rfclass.fit(x_train, y_train)
 
-
+from sklearn.externals import joblib
+joblib.dump(rfclass, "{0}\{1}".format(file_path, "rfclass.pkl"))
 
 # Score model on test dataset and examine model performance metrics
+# Accuracy
+print "Training Accuracy: ", rfclass.score(x_train, y_train)
+print "Test Accuracy: ", rfclass.score(x_test, y_test)
+
+# train and test y predictions
+y_train_pred = rfclass.predict(x_train)
+y_test_pred = rfclass.predict(x_test)
+# train and test predicted probabilities
+y_train_pred_prob = rfclass.predict_proba(x_train)
+y_test_pred_prob = rfclass.predict_proba(x_test)
+
+# Calculate Area Under Curve (AUC)
+from sklearn.metrics import roc_auc_score, auc
+
+print("Training ROC AUC: %.3f" %roc_auc_score(y_train, y_train_pred_prob[:,1]))
+print("Test ROC AUC: %.3f" %roc_auc_score(y_test, y_test_pred_prob[:,1]))
+
+from sklearn.metrics import roc_curve
+fpr, tpr, thresholds = roc_curve(y_test, y_test_pred_prob[:,1], pos_label=1)
+roc_auc = auc(fpr, tpr)
+
+plt.plot(fpr, tpr, lw=1, label="ROC (area = %0.2f)" %roc_auc)
+plt.plot([0,1 ], [0, 1], linestyle="--", color=(0.6, 0.6, 0.6), label="random guessing")
+plt.plot([0, 0, 1], [0, 1, 1], lw=2, linestyle=":", color="black", label="perfect performance")
+plt.xlim([-0.05, 1.05])
+plt.ylim([-0.05, 1.05])
+plt.xlabel("false positive rate")
+plt.ylabel("true positive rate")
+plt.title("Receiver Operator Characteristic Curve")
+plt.legend(loc="lower right")
+plt.show()
+
+# Recall
+from sklearn.metrics import recall_score
+print("Training Recall Score: %.4f" %recall_score(y_train, y_train_pred))
+print("Test Recall Score: %.4f" %recall_score(y_test, y_test_pred))
+
+# Precision
+from sklearn.metrics import precision_score
+print("Training Precision Score: %.4f" %precision_score(y_train, y_train_pred))
+print("Test Precision Score: %.4f" %precision_score(y_test, y_test_pred))
+
+# confusion matrices
+
+# lift charts
 
 # Look at variable importance
+feature_name = np.array(feature_list)
+feat_ind = np.argsort(rfclass.feature_importances_)[::-1]
+feat_imp = rfclass.feature_importances_[feat_ind]
+
+feature_importance = pd.DataFrame({"Feature_Ind":feat_ind,
+                                   "Feature_Name":feature_name,
+                                   "Feature_Imp":feat_imp})
+    
+feature_importance.sort_values(by="Feature_Imp", ascending=False, inplace=True)
+feature_importance.reset_index(drop=True, inplace=True)
+
+pd.set_option("display.max_rows", 100)
+print feature_importance[0:49][["Feature_Imp", "Feature_Name"]]
 
 # See if we can simplify the model or improve it 
 
