@@ -104,38 +104,6 @@ for var in hist_var_list:
 # prev_number_of_products
 # video_days_on_books
 
-
-
-
-"""
-var = "data_total_gb"
-t0 = data[data.target==0][var]
-t1 = data[data.target==1][var]
-n, bins, patches = plt.hist([t0,t1],10, label=["t0","t1"])
-plt.title(var, fontsize=14)
-plt.legend(fontsize=12)
-"""
-var = "data_total_gb"
-df = pd.DataFrame({"t0": data[data.target==0][var], "t1": data[data.target==1][var]}, columns=["t0","t1"]) 
-df.plot.hist(bins=20)
-plt.title(var, fontsize=14)
-plt.show()
-
-var = "data_total_gb"
-plt.figure()
-data.hist(column=var, by="target", bins=20, histtype="barstacked")
-#plt.title(var, fontsize=14)
-plt.show()
-
-var = "data_total_gb"
-plt.figure()
-df.hist(bins=20, histtype="barstacked")
-#plt.title(var, fontsize=14)
-plt.show()
-
-
-
-
 # create dummy variables for object datatypes
 
 data_mod = pd.get_dummies(data, columns=["product", "MAJOR_CREDIT_CARD_LIF"])
@@ -157,6 +125,10 @@ test = data_mod.iloc[L[n:], :].copy()
 # save train and test datasets to a pickle file
 pickle.dump(train, open("{0}\{1}".format(file_path, "train"), "wb"))
 pickle.dump(test, open("{0}\{1}".format(file_path, "test"), "wb"))
+
+# uncomment and run below lines if you need to reload train and test data
+train = pickle.load(open("{0}\{1}".format(file_path, "train"), "rb"))
+test = pickle.load(open("{0}\{1}".format(file_path, "test"), "rb"))
 
 # print shape and % of target in the train and test datasets
 print "{0}: {1}".format("Number of rows in training data", train.shape[0])
