@@ -110,12 +110,7 @@ for var in hist_var_list:
     plt.legend(fontsize=12)
     plt.show()
 
-# video_addon_music_choice
-# prev_number_of_products
-# video_days_on_books
-
 # create dummy variables for object datatypes
-
 data_mod = pd.get_dummies(data, columns=["product", "MAJOR_CREDIT_CARD_LIF"])
 pcols = [col for col in data_mod if "product" in col]
 print pcols
@@ -173,6 +168,7 @@ print "Test Accuracy: ", rfclass.score(x_test, y_test)
 # train and test y predictions
 y_train_pred = rfclass.predict(x_train)
 y_test_pred = rfclass.predict(x_test)
+
 # train and test predicted probabilities
 y_train_pred_prob = rfclass.predict_proba(x_train)
 y_test_pred_prob = rfclass.predict_proba(x_test)
