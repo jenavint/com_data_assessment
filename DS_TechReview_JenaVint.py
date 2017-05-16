@@ -79,16 +79,6 @@ one_value_cols = ["svod_bollywood_hits", "home_dw_takeo", "home_system_upgrades"
 data.drop(one_value_cols, axis=1, inplace=True)
 print data.shape
 
-"""
-# make sure indicator variables have values of 0 or 1
-ind_var_list = 
-for var in ind_var_list:
-    print data.groupby(var)["product"].count()
-    if var == "infin_ind":
-        data[var] = np.where(data[var] == 5, 1, 0) # convert 5 to 1 and 3 to 0
-    data[var] = np.where(data[var] <> 0, 1,0)
-    print data.groupby(var)["product"].count()
-"""
 # see how many people are in the target (1), i.e. were cross-sold
 print data.groupby("target")["product"].count()
 # 7004 cross-sold out of 300k, so about 2.3%
@@ -105,39 +95,48 @@ hist_var_list = [col for col in data if col not in remove_list]
 for var in hist_var_list:
     t0 = data[data.target==0][var]
     t1 = data[data.target==1][var]
-    n, bins, patches = plt.hist([t0,t1], label=["t0","t1"])
+    n, bins, patches = plt.hist([t0,t1], label=["t0","t1"], bins=10)
     plt.title(var, fontsize=14)
     plt.legend(fontsize=12)
     plt.show()
 
+# video_addon_music_choice
+# prev_number_of_products
+# video_days_on_books
+
+
+
+
 """
-var = "tellop_ind"
+var = "data_total_gb"
 t0 = data[data.target==0][var]
 t1 = data[data.target==1][var]
-n, bins, patches = plt.hist([t0,t1], label=["t0","t1"])
+n, bins, patches = plt.hist([t0,t1],10, label=["t0","t1"])
 plt.title(var, fontsize=14)
 plt.legend(fontsize=12)
 """
+var = "data_total_gb"
+df = pd.DataFrame({"t0": data[data.target==0][var], "t1": data[data.target==1][var]}, columns=["t0","t1"]) 
+df.plot.hist(bins=20)
+plt.title(var, fontsize=14)
+plt.show()
+
+var = "data_total_gb"
+plt.figure()
+data.hist(column=var, by="target", bins=20, histtype="barstacked")
+#plt.title(var, fontsize=14)
+plt.show()
+
+var = "data_total_gb"
+plt.figure()
+df.hist(bins=20, histtype="barstacked")
+#plt.title(var, fontsize=14)
+plt.show()
+
+
+
 
 # create dummy variables for object datatypes
-
-"""
-data["product_vd"] =  np.where(data["product"] == "VIDEO/DATA", 1, 0)
-data["product_v"] = np.where(data["product"] == "VIDEO ONLY", 1, 0)
-data["product_vdc"] = np.where(data["product"] == "VIDEO/DATA/VOICE", 1, 0)
-data["product_d"] = np.where(data["product"] == "DATA ONLY", 1, 0)
-data["product_dc"] = np.where(data["product"] == "DATA/VOICE", 1, 0)
-data["product_vdh"] = np.where(data["product"] == "VIDEO/DATA/HOME", 1, 0) # 
-data["product_vc"] = np.where(data["product"] == "VIDEO/VOICE", 1, 0) # 
-data["product_vdch"] = np.where(data["product"] == "VIDEO/DATA/VOICE/HOME", 1, 0) # 
-data["product_c"] = np.where(data["product"] == "VOICE ONLY", 1, 0) # 
-data["product_h"] = np.where(data["product"] == "HOME ONLY", 1, 0) # 
-data["product_dh"] = np.where(data["product"] == "DATA/HOME", 1, 0) # 
-data["product_dch"] = np.where(data["product"] == "DATA/VOICE/HOME", 1, 0) # 
-data["product_ch"] = np.where(data["product"] == "VOICE/HOME", 1, 0) # 
-data["product_vch"] = np.where(data["product"] == "VIDEO/VOICE/HOME", 1, 0) # 
-data["product_vh"] = np.where(data["product"] == "VIDEO/HOME", 1, 0) # 
-"""
 
 data_mod = pd.get_dummies(data, columns=["product", "MAJOR_CREDIT_CARD_LIF"])
 pcols = [col for col in data_mod if "product" in col]
