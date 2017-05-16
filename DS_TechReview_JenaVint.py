@@ -36,6 +36,16 @@ print data.isnull().sum()
 age_cols = [col for col in data.columns.values if "AGE" in col]
 print data[age_cols].head()
 
+# remove extra age columns that we don't need to consider for modeling
+extra_age_cols = []
+for i in range(1,22):
+    extra_age_cols.append("AGE%s" %(i))
+    
+print extra_age_cols
+
+model_age_cols = [col for col in age_cols if col not in extra_age_cols]
+print model_age_cols
+    
 # look at unique product combinations
 for i in list(data["product"].unique()):
     print i
@@ -89,7 +99,7 @@ print corr["target"].nlargest(25)
 print corr["target"].nsmallest(25)
 
 # very low correlations, check for any pattern differences in target group (1) vs. non target group (0)
-remove_list = ["target", "product", "MAJOR_CREDIT_CARD_LIF"] + age_cols
+remove_list = ["target", "product", "MAJOR_CREDIT_CARD_LIF"] + extra_age_cols
 hist_var_list = [col for col in data if col not in remove_list]
     
 for var in hist_var_list:
@@ -127,8 +137,8 @@ pickle.dump(train, open("{0}\{1}".format(file_path, "train"), "wb"))
 pickle.dump(test, open("{0}\{1}".format(file_path, "test"), "wb"))
 
 # uncomment and run below lines if you need to reload train and test data
-train = pickle.load(open("{0}\{1}".format(file_path, "train"), "rb"))
-test = pickle.load(open("{0}\{1}".format(file_path, "test"), "rb"))
+# train = pickle.load(open("{0}\{1}".format(file_path, "train"), "rb"))
+# test = pickle.load(open("{0}\{1}".format(file_path, "test"), "rb"))
 
 # print shape and % of target in the train and test datasets
 print "{0}: {1}".format("Number of rows in training data", train.shape[0])
@@ -153,7 +163,7 @@ rfclass = ske.RandomForestClassifier(n_estimators=200, random_state=12345)
 rfclass.fit(x_train, y_train)
 
 from sklearn.externals import joblib
-joblib.dump(rfclass, "{0}\{1}".format(file_path, "rfclass.pkl"))
+joblib.dump(rfclass, "{0}\{1}".format(file_path, "rfclass500.pkl"))
 
 # Score model on test dataset and examine model performance metrics
 # Accuracy
@@ -199,8 +209,31 @@ print("Training Precision Score: %.4f" %precision_score(y_train, y_train_pred))
 print("Test Precision Score: %.4f" %precision_score(y_test, y_test_pred))
 
 # confusion matrices
+# training
+from sklearn.metrics import confusion_matrix
+confmat = confusion_matrix(y_true=y_train, y_pred=y_train_pred)
 
-# lift charts
+fig, ax = plt.subplots(figsize=(4,4))
+ax.matshow(confmat, cmap=plt.cm.Blues, alpha=0.3)
+for i in range(confmat.shape[0]):
+    for j in range(confmat.shape[1]):
+        ax.text(x=j, y=i, s=confmat[i,j], va="center", ha="center", fontsize=14)
+plt.xlabel("predicted label (Training)")
+plt.ylabel("true label (Training)")
+plt.show()
+
+# test
+confmat = confusion_matrix(y_true=y_test, y_pred=y_test_pred)
+
+fig, ax = plt.subplots(figsize=(4,4))
+ax.matshow(confmat, cmap=plt.cm.Blues, alpha=0.3)
+for i in range(confmat.shape[0]):
+    for j in range(confmat.shape[1]):
+        ax.text(x=j, y=i, s=confmat[i,j], va="center", ha="center", fontsize=14)
+plt.xlabel("predicted label (Test)")
+plt.ylabel("true label (Test)")
+plt.show()
+
 
 # Look at variable importance
 feature_name = np.array(feature_list)
@@ -216,8 +249,7 @@ feature_importance.reset_index(drop=True, inplace=True)
 
 pd.set_option("display.max_rows", 100)
 print feature_importance[0:49][["Feature_Imp", "Feature_Name"]]
-
-# See if we can simplify the model or improve it 
+ 
 
 
 
